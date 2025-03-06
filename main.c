@@ -201,14 +201,14 @@ SDL_SetRenderDrawColor(rend,0,255,0,255);
         stepY+=unitStepY;
         side=1;
     }
-        bool cont=true;
-        if(mapAt(currX,currY,map)!=' '){
-            //SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
-            if(side==0)
-                SDL_RenderDrawLine(rend,px+12,py+12,px+12+(stepX-unitStepX)*dirX*32,py+12+(stepX-unitStepX)*dirY*32);
-            else
-                SDL_RenderDrawLine(rend,px+12,py+12,px+12+(stepY-unitStepY)*dirX*32,py+12+(stepY-unitStepY)*dirY*32);
-            cont=false;
+    bool cont=true;
+    if(mapAt(currX,currY,map)!=' '){
+        //SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
+        if(side==0)
+            SDL_RenderDrawLine(rend,px+12,py+12,px+12+(stepX-unitStepX)*dirX*32,py+12+(stepX-unitStepX)*dirY*32);
+        else
+            SDL_RenderDrawLine(rend,px+12,py+12,px+12+(stepY-unitStepY)*dirX*32,py+12+(stepY-unitStepY)*dirY*32);
+        cont=false;
         }
     //SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
 
