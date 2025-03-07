@@ -148,74 +148,50 @@ SDL_SetRenderDrawColor(rend,0,255,0,255);
     }
 
     //lines
-    
-    SDL_SetRenderDrawColor(rend,0,255,0,255);
-    float dirX=cos(angle);
-    float dirY=sin(angle);
+    int column=0;
+    for(float j=-0.6;j<0.6;j+=0.01){
+        SDL_SetRenderDrawColor(rend,0,255,0,255);
+        float dirX=cos(angle+j);
+        float dirY=sin(angle+j);
 
-    int shiftX;
-    int shiftY;
-    if(dirX<0)
-        shiftX=-1;
-    else
-        shiftX=1;
-    if(dirY<0)
-        shiftY=-1;
-    else
-        shiftY=1;
+        int shiftX;
+        int shiftY;
+        if(dirX<0)
+            shiftX=-1;
+        else
+            shiftX=1;
+        if(dirY<0)
+            shiftY=-1;
+        else
+            shiftY=1;
 
-    printf("%f\n",cos(angle));
-    int currX=floor((px+12)/32);
-    int currY=floor((py+12)/32);
-    SDL_SetRenderDrawColor(rend,255,0,0,255);
-    SDL_RenderDrawRect(rend,&(SDL_Rect){x:32*currX,y:32*currY,w:32,h:32});
-    SDL_SetRenderDrawColor(rend,0,255,0,255);
-    float initX=1-((((float) px+12)-32.0*((float)floor((double)((px+12)/32))))/32);
-    float initY=1-((((float) py+12)-32.0*((float)floor((double)((py+12)/32))))/32);
-    int side;
+        printf("%f\n",cos(angle));
+        int currX=floor((px+12)/32);
+        int currY=floor((py+12)/32);
+        SDL_SetRenderDrawColor(rend,255,0,0,255);
+        SDL_RenderDrawRect(rend,&(SDL_Rect){x:32*currX,y:32*currY,w:32,h:32});
+        SDL_SetRenderDrawColor(rend,0,255,0,255);
+        float initX=1-((((float) px+12)-32.0*((float)floor((double)((px+12)/32))))/32);
+        float initY=1-((((float) py+12)-32.0*((float)floor((double)((py+12)/32))))/32);
+        int side;
 
-    if(shiftX<0){
-        initX=1-initX;
-        side=0;
-    }
-    if(shiftY<0){
-        initY=1-initY;
-        side=1;
-    }
+        if(shiftX<0){
+            initX=1-initX;
+            side=0;
+        }
+        if(shiftY<0){
+            initY=1-initY;
+            side=1;
+        }
 
-    float stepY=initY*sqrt((1/dirY)*(1/dirY));
-    float stepX=initX*sqrt((1/dirX)*(1/dirX));
-    float unitStepX=sqrt((1/dirX)*(1/dirX));
-    float unitStepY=sqrt((1/dirY)*(1/dirY));
+        float stepY=initY*sqrt((1/dirY)*(1/dirY));
+        float stepX=initX*sqrt((1/dirX)*(1/dirX));
+        float unitStepX=sqrt((1/dirX)*(1/dirX));
+        float unitStepY=sqrt((1/dirY)*(1/dirY));
 
-    printf("%f -> %f\n",(1+initX)*stepX,(1+initY)*stepY);
+        printf("%f -> %f\n",(1+initX)*stepX,(1+initY)*stepY);
 
     //SDL_SetRenderDrawColor(rend,120,0,120,255);
-    if(stepX<stepY){
-        currX+=shiftX;
-        stepX+=unitStepX;
-        side=0;
-    }
-    else {
-        currY+=shiftY;
-        stepY+=unitStepY;
-        side=1;
-    }
-    bool cont=true;
-    if(mapAt(currX,currY,map)!=' '){
-        //SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
-        if(side==0)
-            SDL_RenderDrawLine(rend,px+12,py+12,px+12+(stepX-unitStepX)*dirX*32,py+12+(stepX-unitStepX)*dirY*32);
-        else
-            SDL_RenderDrawLine(rend,px+12,py+12,px+12+(stepY-unitStepY)*dirX*32,py+12+(stepY-unitStepY)*dirY*32);
-        cont=false;
-        }
-    //SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
-
-
-    for(int i=1;i<20 && cont;i++){
-        float cacheX=stepX;
-        float cacheY=stepY;
         if(stepX<stepY){
             currX+=shiftX;
             stepX+=unitStepX;
@@ -226,17 +202,55 @@ SDL_SetRenderDrawColor(rend,0,255,0,255);
             stepY+=unitStepY;
             side=1;
         }
+        bool cont=true;
+        float len;
         if(mapAt(currX,currY,map)!=' '){
-            SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
-            if(side==0)
-                SDL_RenderDrawLine(rend,px+12,py+12,px+12+cacheX*dirX*32,py+12+cacheX*dirY*32);
+            //SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
+            if(side==0){
+                len=(stepX-unitStepX);
+            }
             else
-                SDL_RenderDrawLine(rend,px+12,py+12,px+12+cacheY*dirX*32,py+12+cacheY*dirY*32);
-            break;
-        }
-    }
-    //SDL_RenderDrawLine(rend,px+12,py+12,px+12+dirX*20*32,py+12+dirY*20*32);
+                len=(stepY-unitStepY);
+            cont=false;
+            }
+        //SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
 
+
+        for(int i=1;i<20 && cont;i++){
+            float cacheX=stepX;
+            float cacheY=stepY;
+            if(stepX<stepY){
+                currX+=shiftX;
+                stepX+=unitStepX;
+                side=0;
+            }
+            else {
+                currY+=shiftY;
+                stepY+=unitStepY;
+                side=1;
+            }
+            if(mapAt(currX,currY,map)!=' '){
+                SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
+                if(side==0)
+                    len=cacheX;
+                else
+                    len=cacheY;
+                break;
+            }
+        }
+        if(side==0)
+            SDL_SetRenderDrawColor(rend,0,255,0,255);
+        else
+            SDL_SetRenderDrawColor(rend,30,158,33,255);
+        float pa=j;
+        if(pa<0)
+            pa+=2*3.1415926;
+        float scanColumn=(32*720)/((len*cos(pa))*32);
+        float scanOffset=(16*720)/((len*cos(pa))*16);
+        SDL_RenderDrawLine(rend,px+12,py+12,px+12+dirX*len*32,py+12+dirY*len*32);
+        SDL_RenderFillRect(rend,&(SDL_Rect){w:12,h:scanColumn,x:column*12,y:360-scanColumn/2});
+        column++;
+    }
 
     SDL_SetRenderDrawColor(rend,0,0,0,255);
     SDL_RenderPresent(rend);
