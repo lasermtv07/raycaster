@@ -57,7 +57,8 @@ int main(){
         printf("error creating renderer\n");
         return 1;
     }
-
+    SDL_SetRenderDrawBlendMode(rend,SDL_BLENDMODE_BLEND);
+    SDL_Texture* brick=IMG_LoadTexture(rend,"gfx/brick.png");
 
     SDL_RenderClear(rend);
     const char* map="##########\n"\
@@ -78,9 +79,12 @@ int main(){
     int py=48;
     float angle=0;
     while(true){
+
         //int elapsed=SDL_GetTicks();
         SDL_RenderClear(rend);
-
+        /*for(int i=0;i<32;i++){
+            SDL_RenderCopy(rend,brick,&(SDL_Rect){w:1,h:32,x:i,y:0},&(SDL_Rect){w:12,h:32*12,x:i*12,y:0});
+        }*/
         int currentX=(int)((px+2*cos(angle))/32);
         int currentY=(int)((py+2*sin(angle))/32);
 
@@ -165,7 +169,7 @@ SDL_SetRenderDrawColor(rend,0,255,0,255);
         else
             shiftY=1;
 
-        printf("%f\n",cos(angle));
+        //printf("%f\n",cos(angle));
         int currX=floor((px+12)/32);
         int currY=floor((py+12)/32);
         SDL_SetRenderDrawColor(rend,255,0,0,255);
@@ -189,7 +193,7 @@ SDL_SetRenderDrawColor(rend,0,255,0,255);
         float unitStepX=sqrt((1/dirX)*(1/dirX));
         float unitStepY=sqrt((1/dirY)*(1/dirY));
 
-        printf("%f -> %f\n",(1+initX)*stepX,(1+initY)*stepY);
+        //printf("%f -> %f\n",(1+initX)*stepX,(1+initY)*stepY);
 
     //SDL_SetRenderDrawColor(rend,120,0,120,255);
         if(stepX<stepY){
@@ -238,10 +242,18 @@ SDL_SetRenderDrawColor(rend,0,255,0,255);
                 break;
             }
         }
-        if(side==0)
-            SDL_SetRenderDrawColor(rend,0,255,0,255);
-        else
-            SDL_SetRenderDrawColor(rend,30,158,33,255);
+        int hitPosX=(int)(px+12+dirX*len*32)%32;
+        int hitPosY=(int)(py+12+dirY*len*32)%32;
+        if(side==0){
+            SDL_SetRenderDrawColor(rend,0,0,0,1);
+            //hitPos=(int)(px+12+dirX*len*32)%32;
+        }
+        else {
+            SDL_SetRenderDrawColor(rend,0,0,0,128);
+            //hitPos=(int)(py+12+dirY*len*32)%32;
+        }
+        //printf("%d:%d\n",(int)(px+12+dirX*len*32)%32,(int)(py+12+dirY*len*32)%32);
+        printf("%d:%d\n",hitPosX,hitPosY);
         float pa=j;
         if(pa<0)
             pa+=2*3.1415926;
@@ -249,6 +261,12 @@ SDL_SetRenderDrawColor(rend,0,255,0,255);
         float scanOffset=(16*720)/((len*cos(pa))*16);
         SDL_RenderDrawLine(rend,px+12,py+12,px+12+dirX*len*32,py+12+dirY*len*32);
         SDL_RenderFillRect(rend,&(SDL_Rect){w:12,h:scanColumn,x:column*12,y:360-scanColumn/2});
+        if(side==0)
+            SDL_RenderCopy(rend,brick,&(SDL_Rect){w:1,h:32,x:hitPosY,y:0},&(SDL_Rect){w:12,h:scanColumn,x:column*12,y:360-scanColumn/2});
+        else
+            SDL_RenderCopy(rend,brick,&(SDL_Rect){w:1,h:32,x:hitPosX,y:0},&(SDL_Rect){w:12,h:scanColumn,x:column*12,y:360-scanColumn/2});
+        if(side==1)
+            SDL_RenderFillRect(rend,&(SDL_Rect){w:12,h:scanColumn,x:column*12,y:360-scanColumn/2});
         column++;
     }
 
