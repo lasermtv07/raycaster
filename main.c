@@ -11,6 +11,21 @@
 #include "bst.c"
 #define M_PI 3.14159265358979323846
 
+int quadrant(float angle){
+    if(angle<0)
+        angle+=2*M_PI;
+
+    if(angle>0 && angle<0.5*M_PI)
+        return 1;
+    if(angle>0.5*M_PI && angle<M_PI)
+        return 2;
+    if(angle>M_PI && angle<1.5*M_PI)
+        return 3;
+    if(angle>1.5*M_PI && angle<2*M_PI)
+        return 4;
+
+    return -1;
+}
 float min(float a,float b){
     if(a>b)
         return b;
@@ -62,7 +77,7 @@ int main(){
     SDL_SetRenderDrawBlendMode(rend,SDL_BLENDMODE_BLEND);
     bst* texture=newNode('#',IMG_LoadTexture(rend,"gfx/brick.png"));
     addNode(texture,'O',IMG_LoadTexture(rend,"gfx/wood.png"));
-
+    SDL_Texture *miku=IMG_LoadTexture(rend,"gfx/miku.png");
 
     SDL_RenderClear(rend);
     const char* map="##########\n"\
@@ -87,6 +102,8 @@ int main(){
     float angle=0;
     int floorColor[]={160,160,160};
     int ceilingColor[]={0,0,255};
+    int mikuX=6*32+25;
+    int mikuY=104;
     while(true){
 
         //int elapsed=SDL_GetTicks();
@@ -97,23 +114,7 @@ int main(){
         int currentX=(int)((px+2*cos(angle))/32);
         int currentY=(int)((py+2*sin(angle))/32);
 
-        //draw map
-        int yshift=0;
-        int xshift=0;
-        SDL_SetRenderDrawColor(rend,0,0,255,255);
-        for(int i=0;i<strlen(map);i++){
-            if(map[i]!=' ' && map[i]!='\n')
-                SDL_RenderFillRect(rend,&(SDL_Rect){x:xshift*32,y:yshift*32,w:32,h:32});
-            else
-                SDL_RenderDrawRect(rend,&(SDL_Rect){x:xshift*32,y:yshift*32,w:32,h:32});
-            xshift+=1;
-            if(map[i]=='\n'){
-                yshift+=1;
-                xshift=0;
-            }
-        }
-
-        int mX;
+           int mX;
         int mY;
         SDL_GetMouseState(&mX,&mY);
         printf("%d\n",doesPointIntersect(mX,mY,map));
@@ -162,7 +163,7 @@ int main(){
 
     //RAYCASTER
     int column=0;
-    for(float j=-0.6;j<0.6;j+=0.01){
+    for(float j=-0.5235988;j<0.5235988;j+=0.00327249375){
 
         //setup
         SDL_SetRenderDrawColor(rend,0,255,0,255);
@@ -269,11 +270,11 @@ int main(){
 
         //draw ceiling
         SDL_SetRenderDrawColor(rend,ceilingColor[0],ceilingColor[1],ceilingColor[2],255);
-        SDL_RenderFillRect(rend,&(SDL_Rect){w:12,h:360-scanColumn/2,x:column*12,y:0});
+        SDL_RenderFillRect(rend,&(SDL_Rect){w:4,h:360-scanColumn/2,x:column*4,y:0});
 
         //draw floor
         SDL_SetRenderDrawColor(rend,floorColor[0],floorColor[1],floorColor[2],255);
-        SDL_RenderFillRect(rend,&(SDL_Rect){w:12,h:720-(scanColumn+(360-scanColumn/2)),x:column*12,y:scanColumn+(360-scanColumn/2)});
+        SDL_RenderFillRect(rend,&(SDL_Rect){w:4,h:720-(scanColumn+(360-scanColumn/2)),x:column*4,y:scanColumn+(360-scanColumn/2)});
 
         //shading & drawing columns
         if(side==0){
@@ -283,18 +284,62 @@ int main(){
             SDL_SetRenderDrawColor(rend,0,0,0,128);
         }
         if(side==0)
-            SDL_RenderCopy(rend,searchNode(texture,mapAt(currX,currY,map)),&(SDL_Rect){w:1,h:32,x:hitPosY,y:0},&(SDL_Rect){w:12,h:scanColumn,x:column*12,y:360-scanColumn/2});
+            SDL_RenderCopy(rend,searchNode(texture,mapAt(currX,currY,map)),&(SDL_Rect){w:1,h:32,x:hitPosY,y:0},&(SDL_Rect){w:4,h:scanColumn,x:column*4,y:360-scanColumn/2});
         else
-            SDL_RenderCopy(rend,searchNode(texture,mapAt(currX,currY,map)),&(SDL_Rect){w:1,h:32,x:hitPosX,y:0},&(SDL_Rect){w:12,h:scanColumn,x:column*12,y:360-scanColumn/2});
+            SDL_RenderCopy(rend,searchNode(texture,mapAt(currX,currY,map)),&(SDL_Rect){w:1,h:32,x:hitPosX,y:0},&(SDL_Rect){w:4,h:scanColumn,x:column*4,y:360-scanColumn/2});
         if(side==1)
-            SDL_RenderFillRect(rend,&(SDL_Rect){w:12,h:scanColumn,x:column*12,y:360-scanColumn/2});
+            SDL_RenderFillRect(rend,&(SDL_Rect){w:4,h:scanColumn,x:column*4,y:360-scanColumn/2});
 
+        printf("%f\n",j);
         column++;
     }
+    printf("%f\n",angle);
+    int hx=mikuX-px;
+    int hy=mikuY-py;
+    float hAngle=atan2(hy,hx);
+    if(hAngle<0)
+        hAngle+=2*3.1415926;
+    if(hAngle>2*3.1415926)
+        hAngle-=2*3.1415926;
+    SDL_SetRenderDrawColor(rend,128,0,128,255);
+    SDL_RenderDrawLine(rend,px+12,py+12,px+12+60*cos(hAngle),py+12+60*sin(hAngle));
+    //float q=angle+(120/2)-hAngle;
+    float q=angle+(1.047198/2)-hAngle;
+    if(quadrant(angle)==1 && quadrant(hAngle)==4)
+        q+=2*M_PI;
+    if(quadrant(angle)==4 && quadrant(hAngle)==1)
+        q-=2*M_PI;
+    printf("%f\n",q);
+    float projX=(1280/1.047198)*q;
+    SDL_RenderCopy(rend,miku,NULL,&(SDL_Rect){w:32,h:64,y:360-32,x:1280-projX});
+    printf("%f\n",projX);
+    SDL_SetRenderDrawColor(rend,255,0,0,255);
+    SDL_RenderFillRect(rend,&(SDL_Rect){w:10,h:10,x:mikuX,y:mikuY});
+    SDL_SetRenderDrawColor(rend,0,0,0,255);
+     //draw map
+        int yshift=0;
+        int xshift=0;
+        for(int i=0;i<strlen(map);i++){
+            if(map[i]!=' ' && map[i]!='\n')
+                SDL_RenderFillRect(rend,&(SDL_Rect){x:xshift*32,y:yshift*32,w:32,h:32});
+            else
+                SDL_RenderDrawRect(rend,&(SDL_Rect){x:xshift*32,y:yshift*32,w:32,h:32});
+            xshift+=1;
+            if(map[i]=='\n'){
+                yshift+=1;
+                xshift=0;
+            }
+        }
+
+
 
     SDL_SetRenderDrawColor(rend,0,0,0,255);
     SDL_RenderPresent(rend);
     SDL_Delay((1000/60));
+    if(angle>2*M_PI)
+        angle-=2*M_PI;
+    if(angle<0)
+        angle+=2*M_PI;
     }
     return 0;
 }
