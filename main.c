@@ -311,7 +311,9 @@ int main(){
         q-=2*M_PI;
     printf("%f\n",q);
     float projX=(1280/1.047198)*q;
-    SDL_RenderCopy(rend,miku,NULL,&(SDL_Rect){w:32,h:64,y:360-32,x:1280-projX});
+
+    float dst=sqrt(hx*hx+hy*hy);
+    SDL_RenderCopy(rend,miku,NULL,&(SDL_Rect){w:32*720/dst,h:64*720/dst,y:360-(64*720/dst)/2,x:1280-projX});
     printf("%f\n",projX);
     SDL_SetRenderDrawColor(rend,255,0,0,255);
     SDL_RenderFillRect(rend,&(SDL_Rect){w:10,h:10,x:mikuX,y:mikuY});
