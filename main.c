@@ -79,6 +79,11 @@ int main(){
     addNode(texture,'O',IMG_LoadTexture(rend,"gfx/wood.png"));
     SDL_Texture *miku=IMG_LoadTexture(rend,"gfx/miku.png");
 
+    int* spriteW=malloc(sizeof(int));
+    int* spriteH=malloc(sizeof(int));
+    SDL_QueryTexture(miku,NULL,NULL,spriteW,spriteH);
+
+
     SDL_RenderClear(rend);
     const char* map="##########\n"\
                "#        #\n"\
@@ -104,6 +109,9 @@ int main(){
     int ceilingColor[]={0,0,255};
     int mikuX=6*32+25;
     int mikuY=104;
+
+    mikuX=35;
+    mikuY=35;
     while(true){
 
         //int elapsed=SDL_GetTicks();
@@ -161,80 +169,80 @@ int main(){
         py+=ps*sin(angle);
     }
 
-    //RAYCASTER
-    int column=0;
-    for(float j=-0.5235988;j<0.5235988;j+=0.00327249375){
+    printf("%f\n",angle);
 
-        //setup
-        SDL_SetRenderDrawColor(rend,0,255,0,255);
-        float dirX=cos(angle+j);
-        float dirY=sin(angle+j);
+    //calculate vector components and angles
+    int hx=mikuX-px;
+    int hy=mikuY-py;
+    float hAngle=atan2(hy,hx);
+    if(hAngle<0)
+        hAngle+=2*3.1415926;
+    if(hAngle>2*3.1415926)
+        hAngle-=2*3.1415926;
+    SDL_SetRenderDrawColor(rend,128,0,128,255);
+    SDL_RenderDrawLine(rend,px+12,py+12,px+12+60*cos(hAngle),py+12+60*sin(hAngle));
 
-        //coefficients to allow extension to 2pi rotation
-        int shiftX;
-        int shiftY;
-        if(dirX<0)
-            shiftX=-1;
-        else
-            shiftX=1;
-        if(dirY<0)
-            shiftY=-1;
-        else
-            shiftY=1;
+    //calculate angle from the rightmost 
+    float q=angle+(1.047198/2)-hAngle;
+    if(quadrant(angle)==1 && quadrant(hAngle)==4)
+        q+=2*M_PI;
+    if(quadrant(angle)==4 && quadrant(hAngle)==1)
+        q-=2*M_PI;
+    printf("%f\n",q);
+    float projX=(1280/1.047198)*q;
+    float dst=sqrt(hx*hx+hy*hy);
+    //SDL_RenderCopy(rend,miku,NULL,&(SDL_Rect){w:32*720/dst,h:64*720/dst,y:360-(64*720/dst)/2,x:1280-projX});
+    bool first=true;
+    for(int temp=2;temp>0;temp--){
 
-        //calculating initial values
-        int currX=floor((px+12)/32);
-        int currY=floor((py+12)/32);
-        SDL_SetRenderDrawColor(rend,255,0,0,255);
-        SDL_RenderDrawRect(rend,&(SDL_Rect){x:32*currX,y:32*currY,w:32,h:32});
-        SDL_SetRenderDrawColor(rend,0,255,0,255);
-        float initX=1-((((float) px+12)-32.0*((float)floor((double)((px+12)/32))))/32);
-        float initY=1-((((float) py+12)-32.0*((float)floor((double)((py+12)/32))))/32);
-        int side;
+        //RAYCASTER
+        int column=0;
+        int draw=false;
+        for(float j=-0.5235988;j<0.5235988;j+=0.00327249375){
 
-        if(shiftX<0){
-            initX=1-initX;
-            side=0;
-        }
-        if(shiftY<0){
-            initY=1-initY;
-            side=1;
-        }
+            //setup
+            SDL_SetRenderDrawColor(rend,0,255,0,255);
+            float dirX=cos(angle+j);
+            float dirY=sin(angle+j);
 
-        //steps
-        float stepY=initY*sqrt((1/dirY)*(1/dirY));
-        float stepX=initX*sqrt((1/dirX)*(1/dirX));
-        float unitStepX=sqrt((1/dirX)*(1/dirX));
-        float unitStepY=sqrt((1/dirY)*(1/dirY));
-
-        //initial step
-        if(stepX<stepY){
-            currX+=shiftX;
-            stepX+=unitStepX;
-            side=0;
-        }
-        else {
-            currY+=shiftY;
-            stepY+=unitStepY;
-            side=1;
-        }
-
-        //special case: player is in a cell next to wall
-        bool cont=true;
-        float len;
-        if(mapAt(currX,currY,map)!=' '){
-            if(side==0){
-                len=(stepX-unitStepX);
-            }
+            //coefficients to allow extension to 2pi rotation
+            int shiftX;
+            int shiftY;
+            if(dirX<0)
+                shiftX=-1;
             else
-                len=(stepY-unitStepY);
-            cont=false;
+                shiftX=1;
+            if(dirY<0)
+                shiftY=-1;
+            else
+                shiftY=1;
+
+            //calculating initial values
+            int currX=floor((px+12)/32);
+            int currY=floor((py+12)/32);
+            SDL_SetRenderDrawColor(rend,255,0,0,255);
+            SDL_RenderDrawRect(rend,&(SDL_Rect){x:32*currX,y:32*currY,w:32,h:32});
+            SDL_SetRenderDrawColor(rend,0,255,0,255);
+            float initX=1-((((float) px+12)-32.0*((float)floor((double)((px+12)/32))))/32);
+            float initY=1-((((float) py+12)-32.0*((float)floor((double)((py+12)/32))))/32);
+            int side;
+
+            if(shiftX<0){
+                initX=1-initX;
+                side=0;
+            }
+            if(shiftY<0){
+                initY=1-initY;
+                side=1;
             }
 
-        //extended raycast
-        for(int i=1;i<20 && cont;i++){
-            float cacheX=stepX;
-            float cacheY=stepY;
+            //steps
+            float stepY=initY*sqrt((1/dirY)*(1/dirY));
+            float stepX=initX*sqrt((1/dirX)*(1/dirX));
+            float unitStepX=sqrt((1/dirX)*(1/dirX));
+            float unitStepY=sqrt((1/dirY)*(1/dirY));
+
+            //initial step
             if(stepX<stepY){
                 currX+=shiftX;
                 stepX+=unitStepX;
@@ -245,75 +253,90 @@ int main(){
                 stepY+=unitStepY;
                 side=1;
             }
+
+            //special case: player is in a cell next to wall
+            bool cont=true;
+            float len;
             if(mapAt(currX,currY,map)!=' '){
-                SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
-                if(side==0)
-                    len=cacheX;
+                if(side==0){
+                    len=(stepX-unitStepX);
+                }
                 else
-                    len=cacheY;
-                break;
+                    len=(stepY-unitStepY);
+                cont=false;
             }
+
+            //extended raycast
+            for(int i=1;i<20 && cont;i++){
+                float cacheX=stepX;
+                float cacheY=stepY;
+                if(stepX<stepY){
+                    currX+=shiftX;
+                    stepX+=unitStepX;
+                    side=0;
+                }
+                else {
+                    currY+=shiftY;
+                    stepY+=unitStepY;
+                    side=1;
+                }
+                if(mapAt(currX,currY,map)!=' '){
+                    SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
+                    if(side==0)
+                        len=cacheX;
+                    else
+                        len=cacheY;
+                    break;
+                }
+            }
+
+            //calculate at which part of the cell the ray hit; for texturing
+            int hitPosX=(px+12+dirX*len*32)-floor((px+12+dirX*len*32)/32)*32;
+            int hitPosY=(py+12+dirY*len*32)-floor((py+12+dirY*len*32)/32)*32;
+
+            //to mitigate fisheye effect
+            float pa=j;
+            if(pa<0)
+                pa+=2*3.1415926;
+            float scanColumn=(32*720)/((len*cos(pa))*32);
+            float scanOffset=(16*720)/((len*cos(pa))*16);
+
+            SDL_RenderDrawLine(rend,px+12,py+12,px+12+dirX*len*32,py+12+dirY*len*32);
+
+            if(first){
+                //draw ceiling
+                SDL_SetRenderDrawColor(rend,ceilingColor[0],ceilingColor[1],ceilingColor[2],255);
+                SDL_RenderFillRect(rend,&(SDL_Rect){w:4,h:360-scanColumn/2,x:column*4,y:0});
+
+                //draw floor
+                SDL_SetRenderDrawColor(rend,floorColor[0],floorColor[1],floorColor[2],255);
+                SDL_RenderFillRect(rend,&(SDL_Rect){w:4,h:720-(scanColumn+(360-scanColumn/2)),x:column*4,y:scanColumn+(360-scanColumn/2)});
+            }
+
+            if((first && dst<len*32) || (!first && dst>len*32)){
+                //shading & drawing columns
+                if(side==0){
+                    SDL_SetRenderDrawColor(rend,0,0,0,1);
+                }
+                else {
+                    SDL_SetRenderDrawColor(rend,0,0,0,128);
+                }
+                if(side==0)
+                    SDL_RenderCopy(rend,searchNode(texture,mapAt(currX,currY,map)),&(SDL_Rect){w:1,h:32,x:hitPosY,y:0},&(SDL_Rect){w:4,h:scanColumn,x:column*4,y:360-scanColumn/2});
+                else
+                    SDL_RenderCopy(rend,searchNode(texture,mapAt(currX,currY,map)),&(SDL_Rect){w:1,h:32,x:hitPosX,y:0},&(SDL_Rect){w:4,h:scanColumn,x:column*4,y:360-scanColumn/2});
+                if(side==1)
+                    SDL_RenderFillRect(rend,&(SDL_Rect){w:4,h:scanColumn,x:column*4,y:360-scanColumn/2});
+            }
+
+            column++;
         }
-
-        //calculate at which part of the cell the ray hit; for texturing
-        int hitPosX=(px+12+dirX*len*32)-floor((px+12+dirX*len*32)/32)*32;
-        int hitPosY=(py+12+dirY*len*32)-floor((py+12+dirY*len*32)/32)*32;
-
-        //to mitigate fisheye effect
-        float pa=j;
-        if(pa<0)
-            pa+=2*3.1415926;
-        float scanColumn=(32*720)/((len*cos(pa))*32);
-        float scanOffset=(16*720)/((len*cos(pa))*16);
-
-        SDL_RenderDrawLine(rend,px+12,py+12,px+12+dirX*len*32,py+12+dirY*len*32);
-
-        //draw ceiling
-        SDL_SetRenderDrawColor(rend,ceilingColor[0],ceilingColor[1],ceilingColor[2],255);
-        SDL_RenderFillRect(rend,&(SDL_Rect){w:4,h:360-scanColumn/2,x:column*4,y:0});
-
-        //draw floor
-        SDL_SetRenderDrawColor(rend,floorColor[0],floorColor[1],floorColor[2],255);
-        SDL_RenderFillRect(rend,&(SDL_Rect){w:4,h:720-(scanColumn+(360-scanColumn/2)),x:column*4,y:scanColumn+(360-scanColumn/2)});
-
-        //shading & drawing columns
-        if(side==0){
-            SDL_SetRenderDrawColor(rend,0,0,0,1);
+        if(first){
+           //float dst=sqrt(hx*hx+hy*hy);
+            SDL_RenderCopy(rend,miku,NULL,&(SDL_Rect){w:32*720/dst,h:64*720/dst,y:360-(64*720/dst)/2,x:1280-projX});
         }
-        else {
-            SDL_SetRenderDrawColor(rend,0,0,0,128);
-        }
-        if(side==0)
-            SDL_RenderCopy(rend,searchNode(texture,mapAt(currX,currY,map)),&(SDL_Rect){w:1,h:32,x:hitPosY,y:0},&(SDL_Rect){w:4,h:scanColumn,x:column*4,y:360-scanColumn/2});
-        else
-            SDL_RenderCopy(rend,searchNode(texture,mapAt(currX,currY,map)),&(SDL_Rect){w:1,h:32,x:hitPosX,y:0},&(SDL_Rect){w:4,h:scanColumn,x:column*4,y:360-scanColumn/2});
-        if(side==1)
-            SDL_RenderFillRect(rend,&(SDL_Rect){w:4,h:scanColumn,x:column*4,y:360-scanColumn/2});
-
-        printf("%f\n",j);
-        column++;
+        first=false;
     }
-    printf("%f\n",angle);
-    int hx=mikuX-px;
-    int hy=mikuY-py;
-    float hAngle=atan2(hy,hx);
-    if(hAngle<0)
-        hAngle+=2*3.1415926;
-    if(hAngle>2*3.1415926)
-        hAngle-=2*3.1415926;
-    SDL_SetRenderDrawColor(rend,128,0,128,255);
-    SDL_RenderDrawLine(rend,px+12,py+12,px+12+60*cos(hAngle),py+12+60*sin(hAngle));
-    //float q=angle+(120/2)-hAngle;
-    float q=angle+(1.047198/2)-hAngle;
-    if(quadrant(angle)==1 && quadrant(hAngle)==4)
-        q+=2*M_PI;
-    if(quadrant(angle)==4 && quadrant(hAngle)==1)
-        q-=2*M_PI;
-    printf("%f\n",q);
-    float projX=(1280/1.047198)*q;
-
-    float dst=sqrt(hx*hx+hy*hy);
-    SDL_RenderCopy(rend,miku,NULL,&(SDL_Rect){w:32*720/dst,h:64*720/dst,y:360-(64*720/dst)/2,x:1280-projX});
     printf("%f\n",projX);
     SDL_SetRenderDrawColor(rend,255,0,0,255);
     SDL_RenderFillRect(rend,&(SDL_Rect){w:10,h:10,x:mikuX,y:mikuY});
