@@ -32,6 +32,12 @@ float min(float a,float b){
     else
         return a;
 }
+float fAbs(float a){
+    if(a>=0)
+        return a;
+    else
+        return -a;
+}
 bool doesPointIntersect(int x,int y,const char* map){
     int lineLen=0;
     for(int i=0;i<strlen(map);i++){
@@ -108,10 +114,8 @@ int main(){
     int floorColor[]={160,160,160};
     int ceilingColor[]={0,0,255};
     int mikuX=6*32+25;
-    int mikuY=104;
+    int mikuY=112;
 
-    mikuX=35;
-    mikuY=35;
     while(true){
 
         //int elapsed=SDL_GetTicks();
@@ -239,8 +243,8 @@ int main(){
             //steps
             float stepY=initY*sqrt((1/dirY)*(1/dirY));
             float stepX=initX*sqrt((1/dirX)*(1/dirX));
-            float unitStepX=sqrt((1/dirX)*(1/dirX));
-            float unitStepY=sqrt((1/dirY)*(1/dirY));
+            float unitStepX=fAbs(1/dirX);//sqrt((1/dirX)*(1/dirX));
+            float unitStepY=fAbs(1/dirY);//sqrt((1/dirY)*(1/dirY));
 
             //initial step
             if(stepX<stepY){
@@ -281,7 +285,7 @@ int main(){
                     side=1;
                 }
                 if(mapAt(currX,currY,map)!=' '){
-                    SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
+                    //SDL_RenderDrawRect(rend,&(SDL_Rect){x:currX*32,y:currY*32,w:32,h:32});
                     if(side==0)
                         len=cacheX;
                     else
@@ -301,7 +305,7 @@ int main(){
             float scanColumn=(32*720)/((len*cos(pa))*32);
             float scanOffset=(16*720)/((len*cos(pa))*16);
 
-            SDL_RenderDrawLine(rend,px+12,py+12,px+12+dirX*len*32,py+12+dirY*len*32);
+            //SDL_RenderDrawLine(rend,px+12,py+12,px+12+dirX*len*32,py+12+dirY*len*32);
 
             if(first){
                 //draw ceiling
@@ -314,6 +318,11 @@ int main(){
             }
 
             if((first && dst<len*32) || (!first && dst>len*32)){
+
+                //draw floor - redraw because reasons
+                SDL_SetRenderDrawColor(rend,floorColor[0],floorColor[1],floorColor[2],255);
+                SDL_RenderFillRect(rend,&(SDL_Rect){w:4,h:720-(scanColumn+(360-scanColumn/2)),x:column*4,y:scanColumn+(360-scanColumn/2)});
+
                 //shading & drawing columns
                 if(side==0){
                     SDL_SetRenderDrawColor(rend,0,0,0,1);
@@ -338,7 +347,7 @@ int main(){
         first=false;
     }
     printf("%f\n",projX);
-    SDL_SetRenderDrawColor(rend,255,0,0,255);
+ /*   SDL_SetRenderDrawColor(rend,255,0,0,255);
     SDL_RenderFillRect(rend,&(SDL_Rect){w:10,h:10,x:mikuX,y:mikuY});
     SDL_SetRenderDrawColor(rend,0,0,0,255);
      //draw map
@@ -354,7 +363,7 @@ int main(){
                 yshift+=1;
                 xshift=0;
             }
-        }
+        }*/
 
 
 
