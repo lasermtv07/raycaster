@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "sprites.c"
 #include "bst.c"
 #define M_PI 3.14159265358979323846
 
@@ -63,12 +64,12 @@ char mapAt(int x,int y,const char* map){
     }
     return map[lineLen*y+x];
 }
-int main(){
-    
+int main(){/*
+    //init
     if(SDL_Init(SDL_INIT_VIDEO| SDL_INIT_TIMER | SDL_INIT_AUDIO)){
         printf("error\n");
         return 1;
-    }
+    }*/
     SDL_Window* win=SDL_CreateWindow("game",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,1280,720,0);
     if(!win){
         printf("window error\n");
@@ -81,40 +82,55 @@ int main(){
         return 1;
     }
     SDL_SetRenderDrawBlendMode(rend,SDL_BLENDMODE_BLEND);
+
+    //import textures
     bst* texture=newNode('#',IMG_LoadTexture(rend,"gfx/brick.png"));
     addNode(texture,'O',IMG_LoadTexture(rend,"gfx/wood.png"));
-    SDL_Texture *miku=IMG_LoadTexture(rend,"gfx/miku.png");
 
-    int* spriteW=malloc(sizeof(int));
+    //mik
+    /*int* spriteW=malloc(sizeof(int));
     int* spriteH=malloc(sizeof(int));
-    SDL_QueryTexture(miku,NULL,NULL,spriteW,spriteH);
+    SDL_QueryTexture(miku,NULL,NULL,spriteW,spriteH);*/
+    SDL_Texture *miku=IMG_LoadTexture(rend,"gfx/miku.png");
+    SDL_Texture* teto=IMG_LoadTexture(rend,"gfx/teto.png");
+
+    sprite* spriteList=newSprite(miku,64,64,0);
+    addSprite(spriteList,teto,169,169,0);
+addSprite(spriteList,miku,189,189,0);
+addSprite(spriteList,miku,7*32+12,38,0);
+addSprite(spriteList,miku,7*32,4*32+10,0);
+    spriteSort(spriteList);
+
 
 
     SDL_RenderClear(rend);
     const char* map="##########\n"\
                "#        #\n"\
-               "#     OO #\n"\
-               "#    O  ##\n"\
-               "#    OO ##\n"\
-               "#       ##\n"\
-               "#        #\n"\
-               "#        #\n"\
+               "#    OOO #\n"\
+               "#  OOO  ##\n"\
+               "#  O  O ##\n"\
+               "#  O    ##\n"\
+               "#  OO    #\n"\
+               "#   OO   #\n"\
                "#        #\n"\
                "##########";
+    
+    //line length
     int lineLen=0;
     for(int i=0;i<strlen(map);i++){
         lineLen++;
         if(map[i]=='\n')
             break;
     }
+    //init vars
     const int ps=3;
     int px=72;
     int py=48;
-    float angle=0;
+    float angle=0.05;
     int floorColor[]={160,160,160};
     int ceilingColor[]={0,0,255};
-    int mikuX=6*32+25;
-    int mikuY=112;
+    //int mikuX=6*32+25;
+    //int mikuY=112;
 
     while(true){
 
@@ -176,27 +192,39 @@ int main(){
     printf("%f\n",angle);
 
     //calculate vector components and angles
-    int hx=mikuX-px;
-    int hy=mikuY-py;
-    float hAngle=atan2(hy,hx);
-    if(hAngle<0)
-        hAngle+=2*3.1415926;
-    if(hAngle>2*3.1415926)
-        hAngle-=2*3.1415926;
-    SDL_SetRenderDrawColor(rend,128,0,128,255);
-    SDL_RenderDrawLine(rend,px+12,py+12,px+12+60*cos(hAngle),py+12+60*sin(hAngle));
+    sprite* tmpSprite=spriteList;
 
-    //calculate angle from the rightmost 
-    float q=angle+(1.047198/2)-hAngle;
-    if(quadrant(angle)==1 && quadrant(hAngle)==4)
-        q+=2*M_PI;
-    if(quadrant(angle)==4 && quadrant(hAngle)==1)
-        q-=2*M_PI;
-    printf("%f\n",q);
-    float projX=(1280/1.047198)*q;
-    float dst=sqrt(hx*hx+hy*hy);
+    while(tmpSprite!=NULL){
+        int hx=tmpSprite->x-px;
+        int hy=tmpSprite->y-py;
+        float hAngle=atan2(hy,hx);
+        if(hAngle<0)
+            hAngle+=2*3.1415926;
+        if(hAngle>2*3.1415926)
+            hAngle-=2*3.1415926;
+        SDL_SetRenderDrawColor(rend,128,0,128,255);
+        SDL_RenderDrawLine(rend,px+12,py+12,px+12+60*cos(hAngle),py+12+60*sin(hAngle));
+
+        //calculate angle from the rightmost 
+        float q=angle+(1.047198/2)-hAngle;
+        if(quadrant(angle)==1 && quadrant(hAngle)==4)
+            q+=2*M_PI;
+        if(quadrant(angle)==4 && quadrant(hAngle)==1)
+            q-=2*M_PI;
+        printf("%f\n",q);
+        float projX=(1280/1.047198)*q;
+        float dst=sqrt(hx*hx+hy*hy);
+
+        tmpSprite->dst=dst;
+        tmpSprite->posX=projX;
+        tmpSprite->angle=q;
+        tmpSprite=tmpSprite->next;
+    }
+
+    spriteSort(spriteList);
     //SDL_RenderCopy(rend,miku,NULL,&(SDL_Rect){w:32*720/dst,h:64*720/dst,y:360-(64*720/dst)/2,x:1280-projX});
     bool first=true;
+    int lengths[320];
     for(int temp=2;temp>0;temp--){
 
         //RAYCASTER
@@ -317,7 +345,7 @@ int main(){
                 SDL_RenderFillRect(rend,&(SDL_Rect){w:4,h:720-(scanColumn+(360-scanColumn/2)),x:column*4,y:scanColumn+(360-scanColumn/2)});
             }
 
-            if((first && dst<len*32) || (!first && dst>len*32)){
+            if(/*(first && dst<len*32) || (!first && dst>len*32)*/first){
 
                 //draw floor - redraw because reasons
                 SDL_SetRenderDrawColor(rend,floorColor[0],floorColor[1],floorColor[2],255);
@@ -336,17 +364,40 @@ int main(){
                     SDL_RenderCopy(rend,searchNode(texture,mapAt(currX,currY,map)),&(SDL_Rect){w:1,h:32,x:hitPosX,y:0},&(SDL_Rect){w:4,h:scanColumn,x:column*4,y:360-scanColumn/2});
                 if(side==1)
                     SDL_RenderFillRect(rend,&(SDL_Rect){w:4,h:scanColumn,x:column*4,y:360-scanColumn/2});
-            }
-
+            lengths[column]=len*32;
             column++;
         }
+
+    }
         if(first){
            //float dst=sqrt(hx*hx+hy*hy);
-            SDL_RenderCopy(rend,miku,NULL,&(SDL_Rect){w:32*720/dst,h:64*720/dst,y:360-(64*720/dst)/2,x:1280-projX});
+           sprite* tmpSprite2=spriteList;
+           while(tmpSprite2!=NULL){
+                float dst=tmpSprite2->dst;
+                float projX=tmpSprite2->posX;
+
+                float w=32*720/dst;
+                float h=64*720/dst;
+                float x=1280-projX;
+                float y=360-(64*720/dst)/2;
+
+                int sprW;
+                int sprH;
+                SDL_QueryTexture(tmpSprite2->texture,NULL,NULL,&sprW,&sprH);
+                float scanlineCount=w/4;
+                for(int i=0;i<sprW;i++){
+                    int column=(x+i*4*(scanlineCount/sprW))/4;
+                    if(column>=0 && column<320){
+                        if(lengths[column]>dst)
+                        SDL_RenderCopy(rend,tmpSprite2->texture,&(SDL_Rect){w:1,h:sprH,x:i,y:0},&(SDL_Rect){w:4+4*(scanlineCount/sprW),h:h,y:y,x:x+i*4*(scanlineCount/sprW)});
+                    }
+                }
+
+                tmpSprite2=tmpSprite2->next;
+           }
         }
         first=false;
     }
-    printf("%f\n",projX);
  /*   SDL_SetRenderDrawColor(rend,255,0,0,255);
     SDL_RenderFillRect(rend,&(SDL_Rect){w:10,h:10,x:mikuX,y:mikuY});
     SDL_SetRenderDrawColor(rend,0,0,0,255);

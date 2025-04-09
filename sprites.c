@@ -8,17 +8,22 @@ typedef struct sprite {
     int z;
     float dst;
     float posX;
+    float angle;
+    bool visible;
     struct sprite* next;
 } sprite;
 
 sprite* newSprite(SDL_Texture* texture,int x, int y, int z){
     sprite* o=malloc(sizeof(sprite));
     if(o!=NULL){
+        o->texture=texture;
         o->x=x;
         o->y=y;
         o->z=z;
         o->dst=0;
         o->posX=0;
+        o->angle=0;
+        o->visible=true;
         o->next=NULL;
     }
     return o;
@@ -28,5 +33,36 @@ void addSprite(sprite* a,SDL_Texture* texture,int x, int y, int z){
     while(a->next!=NULL)
         a=a->next;
     a->next=newSprite(texture,x,y,z);
+    //(a->next)->prev=a;
 }
-void spriteSort();
+void copySpriteData(sprite* s2, sprite* s1){
+        s2->texture=s1->texture;
+        s2->x=s1->x;
+        s2->y=s1->y;
+        s2->z=s1->z;
+        s2->dst=s1->dst;
+        s2->posX=s1->posX;
+        s2->visible=s1->visible;
+}
+void spriteSort(sprite* a){
+    if(a==NULL)
+        return;
+    sprite* tmp1=a;
+    while(tmp1!=NULL){
+        sprite* tmp2=tmp1;
+        sprite* max=tmp2;
+        while(tmp2!=NULL){
+            if(max->dst < tmp2->dst)
+                max=tmp2;
+            tmp2=tmp2->next;
+        }
+
+        sprite* temp=malloc(sizeof(sprite));
+        copySpriteData(temp,tmp1);
+        copySpriteData(tmp1,max);
+        copySpriteData(max,temp);
+        free(temp);
+
+        tmp1=tmp1->next;
+    }
+}
