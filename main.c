@@ -116,11 +116,12 @@ const char* map="#################\n"\
     SDL_Texture *miku=IMG_LoadTexture(rend,"gfx/miku.png");
     SDL_Texture* teto=IMG_LoadTexture(rend,"gfx/teto.png");
     SDL_Texture* orb=IMG_LoadTexture(rend,"gfx/orb.png");
+    SDL_Texture* blinky=IMG_LoadTexture(rend,"gfx/blinky.png");
 
-    sprite* spriteList=newSprite(miku,-38,-38,0);
+    sprite* spriteList=newSprite(blinky,7*32+8,2*32+32+8,0);
     /*addSprite(spriteList,teto,169,169,0);
     addSprite(spriteList,miku,189,189,0);
-    addSprite(spriteList,miku,7*32+12,38,0);
+    addSprite(spriteList,miku,1*32+12,38,0);
     addSprite(spriteList,miku,7*32,4*32+10,0);*/
     spriteSort(spriteList);
 
@@ -136,7 +137,7 @@ const char* map="#################\n"\
             Yshift++;
         }
     }
-
+    
     SDL_RenderClear(rend);
 /*    const char* map="##########\n"\
                "#        #\n"\
@@ -179,7 +180,7 @@ const char* map="#################\n"\
            int mX;
         int mY;
         SDL_GetMouseState(&mX,&mY);
-        printf("%d\n",doesPointIntersect(mX,mY,map));
+        //printf("%d\n",doesPointIntersect(mX,mY,map));
         SDL_SetRenderDrawColor(rend,255,0,0,255);
         SDL_RenderFillRect(rend,&(SDL_Rect){x:px,y:py,w:24,h:24});
         SDL_RenderDrawLine(rend,px+12,py+12,px+12+32*cos(angle),py+12+32*sin(angle));
@@ -193,7 +194,7 @@ const char* map="#################\n"\
                 return 0;
             }
         }
-        printf("%c\n",mapAt(5,3,map));
+        //printf("%c\n",mapAt(5,3,map));
 
     //handle key controls
     const Uint8* kb=SDL_GetKeyboardState(NULL);
@@ -223,7 +224,7 @@ const char* map="#################\n"\
         py+=ps*sin(angle);
     }
 
-    printf("%f\n",angle);
+    //printf("%f\n",angle);
     //calculate vector components and angles
     sprite* tmpSprite=spriteList;
 
@@ -244,7 +245,7 @@ const char* map="#################\n"\
             q+=2*M_PI;
         if(quadrant(angle)==4 && quadrant(hAngle)==1)
             q-=2*M_PI;
-        printf("%f\n",q);
+        //printf("%f\n",q);
         float projX=(1280/1.047198)*q;
         float dst=sqrt(hx*hx+hy*hy);
 
@@ -433,8 +434,9 @@ const char* map="#################\n"\
                 }
                 tmpSprite2=tmpSprite2->next;
            }
-        first=false;
 
+    int currX=floor((px)/32);
+    int currY=floor((py+12)/32);
 
     SDL_SetRenderDrawColor(rend,0,0,0,255);
      //draw map
@@ -451,10 +453,10 @@ const char* map="#################\n"\
                 xshift=0;
             }
     }
-    SDL_SetRenderDrawColor(rend,255,0,0,255);
-    SDL_RenderFillRect(rend,&(SDL_Rect){x:(px/4)+3,y:(py/4)+3,w:4,h:4});
+    SDL_SetRenderDrawColor(rend,255,187,0,255);
+    SDL_RenderFillRect(rend,&(SDL_Rect){x:(px/4)+3,y:(py/4)+3,w:8,h:8});
 
-    //draw sprites
+    //draw sprites, handle movements
     int remaining=0;
     SDL_SetRenderDrawColor(rend,255,251,0,255);
     sprite* tmpSprite3=spriteList;
@@ -465,7 +467,115 @@ const char* map="#################\n"\
             SDL_RenderFillRect(rend,&(SDL_Rect){x:lX/4+2,y:lY/4+2,w:4,h:4});
             remaining++;
         }
+        if(tmpSprite3->texture==blinky){
+            if(tmpSprite3->x>tmpSprite3->trgX)
+                tmpSprite3->x--;
+            if(tmpSprite3->x<tmpSprite3->trgX)
+                tmpSprite3->x++;
+            if(tmpSprite3->y>tmpSprite3->trgY)
+                tmpSprite3->y--;
+            if(tmpSprite3->y<tmpSprite3->trgY)
+                tmpSprite3->y++;
 
+            //dir=0: up
+            //dir=1: left
+            //dir=2: right
+            //dir=3: down
+            if(tmpSprite3->y==tmpSprite3->trgY && tmpSprite3->x==tmpSprite3->trgX){
+                int ghostX=tmpSprite3->x;
+                int ghostY=tmpSprite3->y;
+                bool possU=true;
+                bool possL=true;
+                bool possR=true;
+                bool possD=true;
+                int dir=tmpSprite3->dir;
+
+                if(dir==0)
+                    possD=false;
+                if(dir==1)
+                    possR=false;
+                if(dir==2)
+                    possL=false;
+                if(dir==3)
+                    possU=false;
+                
+                int gCellX=floor(ghostX/32);
+                int gCellY=floor(ghostY/32);
+
+                if(mapAt(gCellX+1,gCellY,map)!=' ')
+                    possR=false;
+                if(mapAt(gCellX-1,gCellY,map)!=' ')
+                    possL=false;
+                if(mapAt(gCellX,gCellY+1,map)!=' ')
+                    possD=false;
+                if(mapAt(gCellX,gCellY-1,map)!=' ')
+                    possU=false;
+
+                //FOR DEBUG
+                SDL_SetRenderDrawColor(rend,255,0,0,255);
+                if(possL)
+                    SDL_RenderFillRect(rend,&(SDL_Rect){w:8,h:8,x:8*gCellX-8,y:gCellY*8});
+                SDL_SetRenderDrawColor(rend,0,255,0,255);
+                if(possR)
+                    SDL_RenderFillRect(rend,&(SDL_Rect){w:8,h:8,x:8*gCellX+8,y:gCellY*8});
+                SDL_SetRenderDrawColor(rend,0,0,255,255);
+                if(possU)
+                    SDL_RenderFillRect(rend,&(SDL_Rect){w:8,h:8,x:8*gCellX,y:gCellY*8-8});
+                SDL_SetRenderDrawColor(rend,255,255,255,255);
+                if(possD)
+                    SDL_RenderFillRect(rend,&(SDL_Rect){w:8,h:8,x:8*gCellX,y:gCellY*8+8});
+                SDL_SetRenderDrawColor(rend,255,251,0,255);
+
+                //BLINKY - chase mode
+                float dstL=9999999;
+                float dstR=9999999;
+                float dstU=9999999;
+                float dstD=9999999;
+
+                if(possL)
+                    dstL=sqrt(((gCellX-1)*32-px)*((gCellX-1)*32-px)+(gCellY*32-py)*(gCellY*32-py));
+                if(possR)
+                    dstR=sqrt(((gCellX+1)*32-px)*((gCellX+1)*32-px)+(gCellY*32-py)*(gCellY*32-py));
+                if(possU)
+                    dstU=sqrt(((gCellX)*32-px)*((gCellX)*32-px)+((gCellY-1)*32-py)*((gCellY-1)*32-py));
+                if(possD)
+                    dstD=sqrt(((gCellX)*32-px)*((gCellX)*32-px)+((gCellY+1)*32-py)*((gCellY+1)*32-py));
+
+                float min=dstL;
+                if(dstR<min)
+                    min=dstR;
+                if(dstU<min)
+                    min=dstU;
+                if(dstD<min)
+                    min=dstD;
+
+                if(min==dstU){
+                    tmpSprite3->trgX=(gCellX)*32+8;
+                    tmpSprite3->trgY=(gCellY-1)*32+8;
+                    tmpSprite3->dir=0;
+                    printf("Go UP!\n");
+                }
+                if(min==dstL){
+                    tmpSprite3->trgX=(gCellX-1)*32+8;
+                    tmpSprite3->trgY=gCellY*32;
+                    tmpSprite3->dir=1;
+                    printf("Go LEFT!\n");
+                }
+                if(min==dstD){
+                    tmpSprite3->trgX=(gCellX)*32+8;
+                    tmpSprite3->trgY=(gCellY+1)*32+8;
+                    tmpSprite3->dir=3;
+                    printf("Go DOWN!\n");
+                }
+                if(min==dstR){
+                    tmpSprite3->trgX=(gCellX+1)*32+8;
+                    tmpSprite3->trgY=gCellY*32;
+                    tmpSprite3->dir=2;
+                    printf("Go RIGHT!\n");
+                }
+                
+            }
+        }
         tmpSprite3=tmpSprite3->next;
     }
 
@@ -478,8 +588,7 @@ const char* map="#################\n"\
     if(angle<0)
         angle+=2*M_PI;
 
-    int currX=floor((px)/32);
-    int currY=floor((py+12)/32);
+
 
     //handles DOOORSS!
     if(currX==1 && currY==9){
@@ -492,6 +601,7 @@ const char* map="#################\n"\
         py=8*32+48;
         angle=0*(M_PI/180);
     }
+
     }
     return 0;
 }
