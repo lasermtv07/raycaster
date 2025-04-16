@@ -117,13 +117,21 @@ const char* map="#################\n"\
     SDL_Texture* teto=IMG_LoadTexture(rend,"gfx/teto.png");
     SDL_Texture* orb=IMG_LoadTexture(rend,"gfx/orb.png");
     SDL_Texture* blinky=IMG_LoadTexture(rend,"gfx/blinky.png");
+    SDL_Texture* pinky=IMG_LoadTexture(rend,"gfx/pinky.png");
+    SDL_Texture* inky=IMG_LoadTexture(rend,"gfx/inky.png");
+    SDL_Texture* clyde=IMG_LoadTexture(rend,"gfx/clyde.png");
 
     sprite* spriteList=newSprite(blinky,7*32+8,2*32+32+8,0);
+    addSprite(spriteList,pinky,7*32+8,32+8,0);
+    addSprite(spriteList,inky,7*32+8,32+8,0);
+    addSprite(spriteList,clyde,7*32+8,32+8,0);
     /*addSprite(spriteList,teto,169,169,0);
     addSprite(spriteList,miku,189,189,0);
     addSprite(spriteList,miku,1*32+12,38,0);
     addSprite(spriteList,miku,7*32,4*32+10,0);*/
     spriteSort(spriteList);
+
+    bool clydeRunAway=false;
 
     //place orbs
     int Xshift=0;
@@ -139,16 +147,6 @@ const char* map="#################\n"\
     }
     
     SDL_RenderClear(rend);
-/*    const char* map="##########\n"\
-               "#        #\n"\
-               "#    OOO #\n"\
-               "#  OOO  ##\n"\
-               "#  O  O ##\n"\
-               "#  O    ##\n"\
-               "#  OO    #\n"\
-               "#   OO   #\n"\
-               "#        #\n"\
-               "##########";*/
 
     //line length
     int lineLen=0;
@@ -171,6 +169,7 @@ const char* map="#################\n"\
 
         //int elapsed=SDL_GetTicks();
         SDL_RenderClear(rend);
+
         /*for(int i=0;i<32;i++){
             SDL_RenderCopy(rend,brick,&(SDL_Rect){w:1,h:32,x:i,y:0},&(SDL_Rect){w:12,h:32*12,x:i*12,y:0});
         }*/
@@ -467,7 +466,8 @@ const char* map="#################\n"\
             SDL_RenderFillRect(rend,&(SDL_Rect){x:lX/4+2,y:lY/4+2,w:4,h:4});
             remaining++;
         }
-        if(tmpSprite3->texture==blinky){
+        if(tmpSprite3->texture==blinky || tmpSprite3->texture==pinky
+           || tmpSprite3->texture==inky || tmpSprite3->texture==clyde){
             if(tmpSprite3->x>tmpSprite3->trgX)
                 tmpSprite3->x--;
             if(tmpSprite3->x<tmpSprite3->trgX)
@@ -511,35 +511,92 @@ const char* map="#################\n"\
                 if(mapAt(gCellX,gCellY-1,map)!=' ')
                     possU=false;
 
-                //FOR DEBUG
-                SDL_SetRenderDrawColor(rend,255,0,0,255);
-                if(possL)
-                    SDL_RenderFillRect(rend,&(SDL_Rect){w:8,h:8,x:8*gCellX-8,y:gCellY*8});
-                SDL_SetRenderDrawColor(rend,0,255,0,255);
-                if(possR)
-                    SDL_RenderFillRect(rend,&(SDL_Rect){w:8,h:8,x:8*gCellX+8,y:gCellY*8});
-                SDL_SetRenderDrawColor(rend,0,0,255,255);
-                if(possU)
-                    SDL_RenderFillRect(rend,&(SDL_Rect){w:8,h:8,x:8*gCellX,y:gCellY*8-8});
-                SDL_SetRenderDrawColor(rend,255,255,255,255);
-                if(possD)
-                    SDL_RenderFillRect(rend,&(SDL_Rect){w:8,h:8,x:8*gCellX,y:gCellY*8+8});
-                SDL_SetRenderDrawColor(rend,255,251,0,255);
+                //chase mode
+                int tx;
+                int ty;
+                if(tmpSprite3->texture==blinky){
+                    tx=px;
+                    ty=py;
+                }
+                if(tmpSprite3->texture==pinky){
+                    if(angle>45*M_PI/180 && angle<135*M_PI/180){
+                        tx=px;
+                        ty=4*32+py;
+                    }
+                    if((angle>225*M_PI/180 && angle<315*M_PI/180)){
+                        tx=px;
+                        ty=py-4*32;
+                    }
+                    if((angle>135*M_PI/180 && angle<225*M_PI/180)){
+                        tx=px-4*32;
+                        ty=py;
+                    }
+                    if((angle>0 && angle<45*M_PI/180) || (angle>315*M_PI/180 && angle<360*M_PI/180)){
+                        tx=px+4*32;
+                        ty=py;
+                    }                   
+                }
+                //TODO: check correct
+                if(tmpSprite3->texture==inky){
+                    //D.R.Y DEEZ NUTS
+                    int ppx;
+                    int ppy;
+                    if(angle>45*M_PI/180 && angle<135*M_PI/180){
+                        ppx=px;
+                        ppy=2*32+py;
+                    }
+                    if((angle>225*M_PI/180 && angle<315*M_PI/180)){
+                        ppx=px;
+                        ppy=py-2*32;
+                    }
+                    if((angle>135*M_PI/180 && angle<225*M_PI/180)){
+                        ppx=px-2*32;
+                        ppy=py;
+                    }
+                    if((angle>0 && angle<45*M_PI/180) || (angle>315*M_PI/180 && angle<360*M_PI/180)){
+                        ppx=px+2*32;
+                        ppy=py;
+                    }    
 
-                //BLINKY - chase mode
+                    float dx=-tmpSprite3->x+ppx;
+                    float dy=-tmpSprite3->x+ppy;
+
+                    tx=ppx+dx;
+                    ty=ppy+dy;
+                }
+                if(tmpSprite3->texture==clyde){
+                    if(!clydeRunAway){
+                        tx=px;
+                        ty=py;
+                    }
+                    else {
+                        tx=-10000;
+                        ty=10000;
+                    }
+                    int dx=tmpSprite3->x-px;
+                    int dy=tmpSprite3->y-py;
+                    if(sqrt(dx*dx+dy*dy)<4*32){
+                        clydeRunAway=true;
+                    }
+                    if(gCellX==2 && gCellY==19){
+                        clydeRunAway=false;
+                    }
+                    
+                }
+
                 float dstL=9999999;
                 float dstR=9999999;
                 float dstU=9999999;
                 float dstD=9999999;
 
                 if(possL)
-                    dstL=sqrt(((gCellX-1)*32-px)*((gCellX-1)*32-px)+(gCellY*32-py)*(gCellY*32-py));
+                    dstL=sqrt(((gCellX-1)*32-tx)*((gCellX-1)*32-tx)+(gCellY*32-ty)*(gCellY*32-ty));
                 if(possR)
-                    dstR=sqrt(((gCellX+1)*32-px)*((gCellX+1)*32-px)+(gCellY*32-py)*(gCellY*32-py));
+                    dstR=sqrt(((gCellX+1)*32-tx)*((gCellX+1)*32-tx)+(gCellY*32-ty)*(gCellY*32-ty));
                 if(possU)
-                    dstU=sqrt(((gCellX)*32-px)*((gCellX)*32-px)+((gCellY-1)*32-py)*((gCellY-1)*32-py));
+                    dstU=sqrt(((gCellX)*32-tx)*((gCellX)*32-tx)+((gCellY-1)*32-ty)*((gCellY-1)*32-ty));
                 if(possD)
-                    dstD=sqrt(((gCellX)*32-px)*((gCellX)*32-px)+((gCellY+1)*32-py)*((gCellY+1)*32-py));
+                    dstD=sqrt(((gCellX)*32-tx)*((gCellX)*32-tx)+((gCellY+1)*32-ty)*((gCellY+1)*32-ty));
 
                 float min=dstL;
                 if(dstR<min)
@@ -553,33 +610,35 @@ const char* map="#################\n"\
                     tmpSprite3->trgX=(gCellX)*32+8;
                     tmpSprite3->trgY=(gCellY-1)*32+8;
                     tmpSprite3->dir=0;
-                    printf("Go UP!\n");
+                    //printf("Go UP!\n");
                 }
                 if(min==dstL){
                     tmpSprite3->trgX=(gCellX-1)*32+8;
                     tmpSprite3->trgY=gCellY*32;
                     tmpSprite3->dir=1;
-                    printf("Go LEFT!\n");
+                    //printf("Go LEFT!\n");
                 }
                 if(min==dstD){
                     tmpSprite3->trgX=(gCellX)*32+8;
                     tmpSprite3->trgY=(gCellY+1)*32+8;
                     tmpSprite3->dir=3;
-                    printf("Go DOWN!\n");
+                    //printf("Go DOWN!\n");
                 }
                 if(min==dstR){
                     tmpSprite3->trgX=(gCellX+1)*32+8;
                     tmpSprite3->trgY=gCellY*32;
                     tmpSprite3->dir=2;
-                    printf("Go RIGHT!\n");
+                    //printf("Go RIGHT!\n");
                 }
                 
             }
         }
+
         tmpSprite3=tmpSprite3->next;
     }
+    SDL_SetRenderDrawColor(rend,255,255,255,255);
 
-
+printf("%f\n",angle*180/M_PI);
     SDL_SetRenderDrawColor(rend,0,0,0,255);
     SDL_RenderPresent(rend);
     SDL_Delay((1000/60));
