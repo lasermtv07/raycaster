@@ -13,6 +13,7 @@ typedef struct sprite {
     int trgX;
     int trgY;
     int dir;
+    bool frightened;
     struct sprite* next;
 } sprite;
 
@@ -29,7 +30,8 @@ sprite* newSprite(SDL_Texture* texture,int x, int y, int z){
         o->visible=true;
         o->trgX=x;
         o->trgY=y;
-        o->dir=0;
+        o->dir=3;
+        o->frightened=false;
         o->next=NULL;
     }
     return o;
@@ -52,6 +54,7 @@ void copySpriteData(sprite* s2, sprite* s1){
         s2->trgX=s1->trgX;
         s2->trgY=s1->trgY;
         s2->dir=s1->dir;
+        s2->frightened=s1->frightened;
 }
 void spriteSort(sprite* a){
     if(a==NULL)

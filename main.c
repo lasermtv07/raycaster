@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-
+#include <time.h>
 #include "sprites.c"
 #include "bst.c"
 #define M_PI 3.14159265358979323846
@@ -120,24 +120,34 @@ const char* map="#################\n"\
     SDL_Texture* pinky=IMG_LoadTexture(rend,"gfx/pinky.png");
     SDL_Texture* inky=IMG_LoadTexture(rend,"gfx/inky.png");
     SDL_Texture* clyde=IMG_LoadTexture(rend,"gfx/clyde.png");
+    SDL_Texture* pellet=IMG_LoadTexture(rend,"gfx/orb2.png");
+    SDL_Texture* gun=IMG_LoadTexture(rend,"gfx/gun.png");
+    SDL_Texture* frightened=IMG_LoadTexture(rend,"gfx/frightened.png");
 
-    sprite* spriteList=newSprite(blinky,7*32+8,2*32+32+8,0);
-    addSprite(spriteList,pinky,7*32+8,32+8,0);
-    addSprite(spriteList,inky,7*32+8,32+8,0);
-    addSprite(spriteList,clyde,7*32+8,32+8,0);
+    sprite* spriteList=newSprite(blinky,8*32+8,9*32+8,0);
+    addSprite(spriteList,pinky,8*32+8,9*32+8,0);
+    addSprite(spriteList,inky,8*32+8,9*32+8,0);
+    addSprite(spriteList,clyde,8*32+8,9*32+8,0);
     /*addSprite(spriteList,teto,169,169,0);
     addSprite(spriteList,miku,189,189,0);
     addSprite(spriteList,miku,1*32+12,38,0);
     addSprite(spriteList,miku,7*32,4*32+10,0);*/
     spriteSort(spriteList);
 
+    int bullets=0;
     bool clydeRunAway=false;
+    bool chase=true;
+    bool switchChase=true;
 
     //place orbs
     int Xshift=0;
     int Yshift=0;
     for(int i=0;i<strlen(map);i++){
-        if(map[i]==' ' && i!=170 && i!=162 && i!=162+16)
+        if((Yshift==4 && Xshift==2) || (Yshift==4 && Xshift==14)
+        || (Yshift==18 && Xshift==2) || (Yshift==18 && Xshift==14)
+)
+            addSprite(spriteList,pellet,Xshift*32,Yshift*32,0);
+        else if(map[i]==' ' && i!=170 && i!=162 && i!=162+16)
             addSprite(spriteList,orb,Xshift*32,Yshift*32,0);
         Xshift++;
         if(map[i]=='\n'){
@@ -184,6 +194,7 @@ const char* map="#################\n"\
         SDL_RenderFillRect(rend,&(SDL_Rect){x:px,y:py,w:24,h:24});
         SDL_RenderDrawLine(rend,px+12,py+12,px+12+32*cos(angle),py+12+32*sin(angle));
         //SDL_RenderDrawRect(rend,&(SDL_Rect){x:(px/8)*8+3,y:(py/8)*8+3,w:8,h:8});
+        bool wasShot=false;
         SDL_Event event;
         while(SDL_PollEvent(&event)){
             if(event.type==SDL_QUIT){
@@ -191,6 +202,12 @@ const char* map="#################\n"\
                 Mix_CloseAudio();
                 SDL_Quit();
                 return 0;
+            }
+            if(event.type==SDL_KEYDOWN){
+                if(SDL_GetKeyFromScancode(event.key.keysym.scancode)==SDLK_SPACE && bullets>0){
+                    wasShot=true;
+                    bullets--;
+                }
             }
         }
         //printf("%c\n",mapAt(5,3,map));
@@ -227,6 +244,7 @@ const char* map="#################\n"\
     //calculate vector components and angles
     sprite* tmpSprite=spriteList;
 
+    //calculate sprite info
     while(tmpSprite!=NULL){
         int hx=tmpSprite->x-px;
         int hy=tmpSprite->y-py;
@@ -418,8 +436,19 @@ const char* map="#################\n"\
                     for(int i=-sprW/2;i<sprW/2;i++){
                         int column=(x+i*4*(scanlineCount/sprW))/4;
                         if(column>=0 && column<320){
-                            if(lengths[column]>dst)
-                                SDL_RenderCopy(rend,tmpSprite2->texture,&(SDL_Rect){w:1,h:sprH,x:i+sprW/2,y:0},&(SDL_Rect){w:4+4*(scanlineCount/sprW),h:h,y:y,x:x+i*4*(scanlineCount/sprW)});
+                            SDL_Texture* currentSprite=tmpSprite2->texture;
+                            if(tmpSprite2->frightened)
+                                currentSprite=frightened;
+                            if(lengths[column]>dst){
+                                SDL_RenderCopy(rend,currentSprite,&(SDL_Rect){w:1,h:sprH,x:i+sprW/2,y:0},&(SDL_Rect){w:4+4*(scanlineCount/sprW),h:h,y:y,x:x+i*4*(scanlineCount/sprW)});
+
+                                //gun collision
+                                if(column==160 && wasShot &&
+                                  (tmpSprite2->texture==blinky || tmpSprite2->texture==pinky || tmpSprite2->texture==inky || tmpSprite2->texture==clyde)){
+                                    tmpSprite2->frightened=true;
+                                    wasShot=false;
+                                }
+                            }
                         }
                     }
                     //collision with orbs
@@ -428,7 +457,17 @@ const char* map="#################\n"\
                         int gameY=tmpSprite2->y;
                         if(gameX>px-16 && gameX<px+16)
                             if(gameY>py-16 && gameY<py+16)
-                            tmpSprite2->visible=false;
+                                tmpSprite2->visible=false;
+                    }
+                    //collision with pellets
+                    if(tmpSprite2->texture==pellet){
+                        int gameX=tmpSprite2->x;
+                        int gameY=tmpSprite2->y;
+                        if(gameX>px-16 && gameX<px+16)
+                            if(gameY>py-16 && gameY<py+16){
+                                tmpSprite2->visible=false;
+                                bullets++;
+                            }
                     }
                 }
                 tmpSprite2=tmpSprite2->next;
@@ -466,8 +505,20 @@ const char* map="#################\n"\
             SDL_RenderFillRect(rend,&(SDL_Rect){x:lX/4+2,y:lY/4+2,w:4,h:4});
             remaining++;
         }
+        if(tmpSprite3->visible && tmpSprite3->texture==pellet){
+            int lX=tmpSprite3->x;
+            int lY=tmpSprite3->y;
+            SDL_SetRenderDrawColor(rend,255,128,128,255);
+            SDL_RenderFillRect(rend,&(SDL_Rect){x:lX/4+2,y:lY/4+2,w:4,h:4});
+            SDL_SetRenderDrawColor(rend,255,251,0,255);
+            remaining++;
+        }
         if(tmpSprite3->texture==blinky || tmpSprite3->texture==pinky
            || tmpSprite3->texture==inky || tmpSprite3->texture==clyde){
+
+            if(tmpSprite3->x==8*32+8 && tmpSprite3->y==9*32+8)
+                tmpSprite3->frightened=false;
+
             if(tmpSprite3->x>tmpSprite3->trgX)
                 tmpSprite3->x--;
             if(tmpSprite3->x<tmpSprite3->trgX)
@@ -506,84 +557,117 @@ const char* map="#################\n"\
                     possR=false;
                 if(mapAt(gCellX-1,gCellY,map)!=' ')
                     possL=false;
-                if(mapAt(gCellX,gCellY+1,map)!=' ')
+                if(mapAt(gCellX,gCellY+1,map)!=' ' && mapAt(gCellX,gCellY+1,map)!='O')
                     possD=false;
-                if(mapAt(gCellX,gCellY-1,map)!=' ')
+                if(mapAt(gCellX,gCellY-1,map)!=' ' && !(mapAt(gCellX,gCellY-1,map)=='O' && tmpSprite3->frightened))
                     possU=false;
 
-                //chase mode
                 int tx;
                 int ty;
-                if(tmpSprite3->texture==blinky){
-                    tx=px;
-                    ty=py;
-                }
-                if(tmpSprite3->texture==pinky){
-                    if(angle>45*M_PI/180 && angle<135*M_PI/180){
-                        tx=px;
-                        ty=4*32+py;
-                    }
-                    if((angle>225*M_PI/180 && angle<315*M_PI/180)){
-                        tx=px;
-                        ty=py-4*32;
-                    }
-                    if((angle>135*M_PI/180 && angle<225*M_PI/180)){
-                        tx=px-4*32;
-                        ty=py;
-                    }
-                    if((angle>0 && angle<45*M_PI/180) || (angle>315*M_PI/180 && angle<360*M_PI/180)){
-                        tx=px+4*32;
-                        ty=py;
-                    }                   
-                }
-                //TODO: check correct
-                if(tmpSprite3->texture==inky){
-                    //D.R.Y DEEZ NUTS
-                    int ppx;
-                    int ppy;
-                    if(angle>45*M_PI/180 && angle<135*M_PI/180){
-                        ppx=px;
-                        ppy=2*32+py;
-                    }
-                    if((angle>225*M_PI/180 && angle<315*M_PI/180)){
-                        ppx=px;
-                        ppy=py-2*32;
-                    }
-                    if((angle>135*M_PI/180 && angle<225*M_PI/180)){
-                        ppx=px-2*32;
-                        ppy=py;
-                    }
-                    if((angle>0 && angle<45*M_PI/180) || (angle>315*M_PI/180 && angle<360*M_PI/180)){
-                        ppx=px+2*32;
-                        ppy=py;
-                    }    
-
-                    float dx=-tmpSprite3->x+ppx;
-                    float dy=-tmpSprite3->x+ppy;
-
-                    tx=ppx+dx;
-                    ty=ppy+dy;
-                }
-                if(tmpSprite3->texture==clyde){
-                    if(!clydeRunAway){
+                //chase mode
+                if(chase){
+                    if(tmpSprite3->texture==blinky){
                         tx=px;
                         ty=py;
                     }
-                    else {
-                        tx=-10000;
-                        ty=10000;
+                    if(tmpSprite3->texture==pinky){
+                        if(angle>45*M_PI/180 && angle<135*M_PI/180){
+                            tx=px;
+                            ty=4*32+py;
+                        }
+                        if((angle>225*M_PI/180 && angle<315*M_PI/180)){
+                            tx=px;
+                            ty=py-4*32;
+                        }
+                        if((angle>135*M_PI/180 && angle<225*M_PI/180)){
+                            tx=px-4*32;
+                            ty=py;
+                        }
+                        if((angle>0 && angle<45*M_PI/180) || (angle>315*M_PI/180 && angle<360*M_PI/180)){
+                            tx=px+4*32;
+                            ty=py;
+                        }                   
                     }
-                    int dx=tmpSprite3->x-px;
-                    int dy=tmpSprite3->y-py;
-                    if(sqrt(dx*dx+dy*dy)<4*32){
-                        clydeRunAway=true;
-                    }
-                    if(gCellX==2 && gCellY==19){
-                        clydeRunAway=false;
-                    }
-                    
-                }
+                    //TODO: check correct
+                    if(tmpSprite3->texture==inky){
+                        //git blinky x
+                        int blinkyX;
+                        int blinkyY;
+                        sprite* tmpSprite4=spriteList;
+                        while(tmpSprite4!=NULL){
+                            blinkyX=tmpSprite4->x;
+                            blinkyY=tmpSprite4->y;
+                            tmpSprite4=tmpSprite4->next;
+                        }
+                        //D.R.Y DEEZ NUTS
+                        int ppx;
+                        int ppy;
+                        if(angle>45*M_PI/180 && angle<135*M_PI/180){
+                            ppx=px;
+                            ppy=2*32+py;
+                        }
+                        if((angle>225*M_PI/180 && angle<315*M_PI/180)){
+                            ppx=px;
+                            ppy=py-2*32;
+                        }
+                        if((angle>135*M_PI/180 && angle<225*M_PI/180)){
+                            ppx=px-2*32;
+                            ppy=py;
+                        }
+                        if((angle>0 && angle<45*M_PI/180) || (angle>315*M_PI/180 && angle<360*M_PI/180)){
+                            ppx=px+2*32;
+                            ppy=py;
+                        }    
 
+                        float dx=-blinkyX+ppx;
+                        float dy=-blinkyY+ppy;
+
+                        tx=ppx+dx;
+                        ty=ppy+dy;
+                    }
+                    if(tmpSprite3->texture==clyde){
+                        if(!clydeRunAway){
+                            tx=px;
+                            ty=py;
+                        }
+                        else {
+                            tx=-10000;
+                            ty=10000;
+                        }
+                        int dx=tmpSprite3->x-px;
+                        int dy=tmpSprite3->y-py;
+                        if(sqrt(dx*dx+dy*dy)<4*32){
+                            clydeRunAway=true;
+                        }
+                        if(gCellX==2 && gCellY==19){
+                            clydeRunAway=false;
+                        }
+
+                    }
+                }
+                //scatter mode
+                else {
+                    if(tmpSprite3->texture==pinky){
+                        tx=-1000;
+                        ty=-1000;
+                    }
+                    if(tmpSprite3->texture==blinky){
+                        tx=1000;
+                        ty=-1000;
+                    }
+                    if(tmpSprite3->texture==clyde){
+                        tx=-1000;
+                        ty=1000;
+                    }
+                    if(tmpSprite3->texture==inky){
+                        tx=1000;
+                        ty=1000;
+                    }
+                }
+                if(tmpSprite3->frightened){
+                    tx=8*32+8;
+                    ty=9*32+8;
+                }
                 float dstL=9999999;
                 float dstR=9999999;
                 float dstU=9999999;
@@ -631,14 +715,21 @@ const char* map="#################\n"\
                     //printf("Go RIGHT!\n");
                 }
                 
+                SDL_SetRenderDrawColor(rend,255,0,0,255);
+                SDL_RenderFillRect(rend,&(SDL_Rect){w:8,h:8,x:tmpSprite3->x/4,y:tmpSprite3->y/4});
             }
+            //if(sqrt((px-tmpSprite3->x)*(px-tmpSprite3->x)+(py-tmpSprite3->y)*(py-tmpSprite3->y))<16)
+            //    return 0;
         }
 
         tmpSprite3=tmpSprite3->next;
+        SDL_SetRenderDrawColor(rend,255,251,0,255);
     }
     SDL_SetRenderDrawColor(rend,255,255,255,255);
 
-printf("%f\n",angle*180/M_PI);
+    if(bullets>0)
+        SDL_RenderCopy(rend,gun,NULL,NULL);
+
     SDL_SetRenderDrawColor(rend,0,0,0,255);
     SDL_RenderPresent(rend);
     SDL_Delay((1000/60));
@@ -647,7 +738,13 @@ printf("%f\n",angle*180/M_PI);
     if(angle<0)
         angle+=2*M_PI;
 
-
+    //switches mode
+    if((int)time(NULL)%7==0 && switchChase){
+        chase=!chase;
+        switchChase=false;
+    }
+    else if((int)time(NULL)%7!=0)
+        switchChase=true;
 
     //handles DOOORSS!
     if(currX==1 && currY==9){
