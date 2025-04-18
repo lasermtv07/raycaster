@@ -96,7 +96,7 @@ const char* map="#################\n"\
 "#### ## # ## ####\n"\
 "#### #     # ####\n"\
 "#### # #O# # ####\n"\
-" P     # #     P \n"\
+" P     # ##    P \n"\
 "#### # ### # ####\n"\
 "#### #     # ####\n"\
 "#### # ### # ####\n"\
@@ -562,6 +562,17 @@ const char* map="#################\n"\
                 if(mapAt(gCellX,gCellY-1,map)!=' ' && !(mapAt(gCellX,gCellY-1,map)=='O' && tmpSprite3->frightened))
                     possU=false;
 
+                if(!(possD||possU||possL||possR)){
+                if(dir==0)
+                    possD=true;
+                if(dir==1)
+                    possR=true;
+                if(dir==2)
+                    possL=true;
+                if(dir==3)
+                    possU=true;
+                }
+
                 int tx;
                 int ty;
                 //chase mode
@@ -668,9 +679,9 @@ const char* map="#################\n"\
                     tx=8*32+8;
                     ty=9*32+8;
                 }
-                float dstL=9999999;
-                float dstR=9999999;
-                float dstU=9999999;
+                float dstL=99999999;
+                float dstR=99999999;
+                float dstU=99999999;
                 float dstD=9999999;
 
                 if(possL)
@@ -721,8 +732,12 @@ const char* map="#################\n"\
             //if(sqrt((px-tmpSprite3->x)*(px-tmpSprite3->x)+(py-tmpSprite3->y)*(py-tmpSprite3->y))<16)
             //    return 0;
         }
-
-        tmpSprite3=tmpSprite3->next;
+        if(tmpSprite3->texture==blinky || tmpSprite3->texture==pinky
+           || tmpSprite3->texture==inky || tmpSprite3->texture==clyde){
+                SDL_SetRenderDrawColor(rend,255,0,0,255);
+                SDL_RenderFillRect(rend,&(SDL_Rect){w:8,h:8,x:tmpSprite3->x/4,y:tmpSprite3->y/4});
+           }
+                tmpSprite3=tmpSprite3->next;
         SDL_SetRenderDrawColor(rend,255,251,0,255);
     }
     SDL_SetRenderDrawColor(rend,255,255,255,255);

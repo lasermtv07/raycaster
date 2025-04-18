@@ -30,7 +30,7 @@ sprite* newSprite(SDL_Texture* texture,int x, int y, int z){
         o->visible=true;
         o->trgX=x;
         o->trgY=y;
-        o->dir=3;
+        o->dir=0;
         o->frightened=false;
         o->next=NULL;
     }
