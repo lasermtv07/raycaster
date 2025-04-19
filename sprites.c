@@ -15,6 +15,7 @@ typedef struct sprite {
     int dir;
     bool frightened;
     struct sprite* next;
+    struct sprite* prev;
 } sprite;
 
 sprite* newSprite(SDL_Texture* texture,int x, int y, int z){
@@ -33,6 +34,7 @@ sprite* newSprite(SDL_Texture* texture,int x, int y, int z){
         o->dir=0;
         o->frightened=false;
         o->next=NULL;
+        o->prev=NULL;
     }
     return o;
 }
@@ -41,7 +43,7 @@ void addSprite(sprite* a,SDL_Texture* texture,int x, int y, int z){
     while(a->next!=NULL)
         a=a->next;
     a->next=newSprite(texture,x,y,z);
-    //(a->next)->prev=a;
+    (a->next)->prev=a;
 }
 void copySpriteData(sprite* s2, sprite* s1){
         s2->texture=s1->texture;

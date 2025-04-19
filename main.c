@@ -82,6 +82,7 @@ int main(){/*
         return 1;
     }
     SDL_SetRenderDrawBlendMode(rend,SDL_BLENDMODE_BLEND);
+    TTF_Init();
 
     //import textures
     bst* texture=newNode('#',IMG_LoadTexture(rend,"gfx/brick.png"));
@@ -96,7 +97,7 @@ const char* map="#################\n"\
 "#### ## # ## ####\n"\
 "#### #     # ####\n"\
 "#### # #O# # ####\n"\
-" P     # ##    P \n"\
+" P     # #     P \n"\
 "#### # ### # ####\n"\
 "#### #     # ####\n"\
 "#### # ### # ####\n"\
@@ -123,6 +124,17 @@ const char* map="#################\n"\
     SDL_Texture* pellet=IMG_LoadTexture(rend,"gfx/orb2.png");
     SDL_Texture* gun=IMG_LoadTexture(rend,"gfx/gun.png");
     SDL_Texture* frightened=IMG_LoadTexture(rend,"gfx/frightened.png");
+    SDL_Texture* bullet=IMG_LoadTexture(rend,"gfx/bullets.png");
+    SDL_Texture* heart=IMG_LoadTexture(rend,"gfx/hearth.png");
+    TTF_Font* font=TTF_OpenFont("font.ttf",16);
+
+    //MIXER DEEZ NUTS
+    Mix_OpenAudio(44100,MIX_DEFAULT_FORMAT,2,2048);
+    Mix_Chunk* collect=Mix_LoadWAV("sfx/pickupCoin.wav");
+    Mix_Chunk* collectPellet=Mix_LoadWAV("sfx/powerUp.wav");
+    Mix_Chunk* shoot=Mix_LoadWAV("sfx/laserShoot.wav");
+    Mix_Chunk* hit=Mix_LoadWAV("sfx/hitHurt.wav");
+    Mix_Chunk* playerHit=Mix_LoadWAV("sfx/hitPlayer.wav");
 
     sprite* spriteList=newSprite(blinky,8*32+8,9*32+8,0);
     addSprite(spriteList,pinky,8*32+8,9*32+8,0);
@@ -170,8 +182,10 @@ const char* map="#################\n"\
     int px=108;
     int py=48;
     float angle=0.05;
+    int lives=3;
     int floorColor[]={160,160,160};
     int ceilingColor[]={0,0,255};
+    int immunity=0;
     //int mikuX=6*32+25;
     //int mikuY=112;
 
@@ -207,6 +221,7 @@ const char* map="#################\n"\
                 if(SDL_GetKeyFromScancode(event.key.keysym.scancode)==SDLK_SPACE && bullets>0){
                     wasShot=true;
                     bullets--;
+                    Mix_PlayChannel(-1,shoot,0);
                 }
             }
         }
@@ -442,12 +457,6 @@ const char* map="#################\n"\
                             if(lengths[column]>dst){
                                 SDL_RenderCopy(rend,currentSprite,&(SDL_Rect){w:1,h:sprH,x:i+sprW/2,y:0},&(SDL_Rect){w:4+4*(scanlineCount/sprW),h:h,y:y,x:x+i*4*(scanlineCount/sprW)});
 
-                                //gun collision
-                                if(column==160 && wasShot &&
-                                  (tmpSprite2->texture==blinky || tmpSprite2->texture==pinky || tmpSprite2->texture==inky || tmpSprite2->texture==clyde)){
-                                    tmpSprite2->frightened=true;
-                                    wasShot=false;
-                                }
                             }
                         }
                     }
@@ -456,8 +465,10 @@ const char* map="#################\n"\
                         int gameX=tmpSprite2->x;
                         int gameY=tmpSprite2->y;
                         if(gameX>px-16 && gameX<px+16)
-                            if(gameY>py-16 && gameY<py+16)
+                            if(gameY>py-16 && gameY<py+16){
                                 tmpSprite2->visible=false;
+                                Mix_PlayChannel(-1,collect,0);
+                            }
                     }
                     //collision with pellets
                     if(tmpSprite2->texture==pellet){
@@ -467,11 +478,37 @@ const char* map="#################\n"\
                             if(gameY>py-16 && gameY<py+16){
                                 tmpSprite2->visible=false;
                                 bullets++;
+                                Mix_PlayChannel(-1,collectPellet,0);
                             }
                     }
                 }
                 tmpSprite2=tmpSprite2->next;
            }
+           //gun collision
+           sprite* tmpSprite5=spriteList;
+            while(tmpSprite5->next!=NULL)
+                tmpSprite5=tmpSprite5->next;
+            while(tmpSprite5!=NULL){
+                    float dst=tmpSprite5->dst;
+                    float projX=tmpSprite5->posX;
+
+                    float w=32*720/dst;
+                    float h=64*720/dst;
+                    float x=1280-projX;
+                    float y=360-(64*720/dst)/2;
+
+                    if(x>640-120 && x<640+w+120){
+                        if(tmpSprite5->texture==inky || tmpSprite5->texture==blinky
+                        || tmpSprite5->texture==pinky || tmpSprite5->texture==clyde){
+                            if(wasShot){
+                                tmpSprite5->frightened=true;
+                                wasShot=false;
+                                Mix_PlayChannel(-1,hit,0);
+                            }
+                        }
+                    }
+                tmpSprite5=tmpSprite5->prev;
+            }
 
     int currX=floor((px)/32);
     int currY=floor((py+12)/32);
@@ -682,7 +719,7 @@ const char* map="#################\n"\
                 float dstL=99999999;
                 float dstR=99999999;
                 float dstU=99999999;
-                float dstD=9999999;
+                float dstD=99999999;
 
                 if(possL)
                     dstL=sqrt(((gCellX-1)*32-tx)*((gCellX-1)*32-tx)+(gCellY*32-ty)*(gCellY*32-ty));
@@ -729,18 +766,56 @@ const char* map="#################\n"\
                 SDL_SetRenderDrawColor(rend,255,0,0,255);
                 SDL_RenderFillRect(rend,&(SDL_Rect){w:8,h:8,x:tmpSprite3->x/4,y:tmpSprite3->y/4});
             }
-            //if(sqrt((px-tmpSprite3->x)*(px-tmpSprite3->x)+(py-tmpSprite3->y)*(py-tmpSprite3->y))<16)
-            //    return 0;
+            if(sqrt((px-tmpSprite3->x)*(px-tmpSprite3->x)+(py-tmpSprite3->y)*(py-tmpSprite3->y))<16){
+                if(!tmpSprite3->frightened){
+                    tmpSprite3->frightened=true;
+                    lives--;
+                    Mix_PlayChannel(-1,playerHit,0);
+                    immunity=60;
+                }
+            }
         }
-        if(tmpSprite3->texture==blinky || tmpSprite3->texture==pinky
+/*        if(tmpSprite3->texture==blinky || tmpSprite3->texture==pinky
            || tmpSprite3->texture==inky || tmpSprite3->texture==clyde){
                 SDL_SetRenderDrawColor(rend,255,0,0,255);
                 SDL_RenderFillRect(rend,&(SDL_Rect){w:8,h:8,x:tmpSprite3->x/4,y:tmpSprite3->y/4});
-           }
+           }*/
                 tmpSprite3=tmpSprite3->next;
         SDL_SetRenderDrawColor(rend,255,251,0,255);
     }
     SDL_SetRenderDrawColor(rend,255,255,255,255);
+    //UI orb remaining
+    char* orbStr=malloc(1204);
+    memset(orbStr,0,1024);
+    sprintf(orbStr,"%d",remaining);
+    SDL_Surface* orbSurf=TTF_RenderText_Solid(font,orbStr,(SDL_Color){r:255,g:255,b:255,a:255});
+    SDL_Texture* orbTex=SDL_CreateTextureFromSurface(rend,orbSurf);
+    SDL_RenderCopy(rend,orbTex,NULL,&(SDL_Rect){w:(100/3)*strlen(orbStr),h:50,x:30*8,y:32});
+    SDL_RenderCopy(rend,orb,NULL,&(SDL_Rect){w:64*2,h:120*2,x:17*8,y:-80});
+    SDL_DestroyTexture(orbTex);
+    SDL_FreeSurface(orbSurf);
+    free(orbStr);
+
+    //bullets UI
+    char* bulStr=malloc(1024);
+    memset(bulStr,0,1024);
+    sprintf(bulStr,"%d",bullets);
+    SDL_Surface* bulSurf=TTF_RenderText_Solid(font,bulStr,(SDL_Color){r:255,g:255,b:255,a:255});
+    SDL_Texture* bulTex=SDL_CreateTextureFromSurface(rend,bulSurf);
+    SDL_RenderCopy(rend,bulTex,NULL,&(SDL_Rect){w:(100/3)*strlen(bulStr),h:50,x:70*8,y:32});
+    SDL_RenderCopy(rend,bullet,NULL,&(SDL_Rect){w:32*2,h:32*2,x:60*8,y:20});
+    SDL_DestroyTexture(bulTex);
+    SDL_FreeSurface(bulSurf);
+    free(bulStr);
+   
+    //lives UI
+    SDL_RenderCopy(rend,heart,NULL,&(SDL_Rect){w:32*2,h:32*2,x:100*8,y:20});
+    char* livStr=malloc(1024);
+    memset(livStr,0,1024);
+    sprintf(livStr,"%d",lives);
+    SDL_Surface* livSurf=TTF_RenderText_Solid(font,livStr,(SDL_Color){r:255,g:255,b:255,a:255});
+    SDL_Texture* livTex=SDL_CreateTextureFromSurface(rend,livSurf);
+    SDL_RenderCopy(rend,livTex,NULL,&(SDL_Rect){w:(100/3)*strlen(livStr),h:50,x:110*8,y:32});
 
     if(bullets>0)
         SDL_RenderCopy(rend,gun,NULL,NULL);
@@ -772,7 +847,9 @@ const char* map="#################\n"\
         py=8*32+48;
         angle=0*(M_PI/180);
     }
-
+    
+    if(immunity>0)
+        immunity--;
     }
     return 0;
 }
